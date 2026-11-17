@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro S.C. Internacional</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tesseract.js (Leitor OCR para Comprovantes) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- jsPDF (Gerador de Relatórios em PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-rose-500 to-red-700"></div>
+            
+            <div class="text-center mb-6">
+                <!-- Escudo do Clube -->
+                <div class="inline-block p-2 bg-slate-800/80 rounded-full border border-slate-700 shadow-inner mb-3">
+                    <img id="login-club-logo" src="WhatsApp Image 2026-11-16 at 20.04.24 (1).jpeg" alt="Escudo S.C. Internacional" class="w-24 h-24 object-cover rounded-full mx-auto shadow-md">
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight text-white">S.C. Internacional</h1>
+                <p class="text-xs text-red-400 font-semibold uppercase tracking-widest mt-1">Painel Financeiro da Diretoria</p>
+            </div>
+
+            <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Usuário</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="login-user" required class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-red-600 transition" placeholder="Digite seu usuário">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Senha</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="login-pass" required class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-red-600 transition" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div id="login-error" class="hidden text-xs text-rose-400 bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-lg text-center">
+                    Usuário ou senha incorretos.
+                </div>
+
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg transition shadow-lg shadow-red-900/30 text-sm">
+                    Acessar Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APLICAÇÃO PRINCIPAL -->
+    <div id="app-container" class="hidden flex-1 flex flex-col">
+        <!-- Cabeçalho -->
+        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <img id="header-club-logo" src="WhatsApp Image 2026-11-16 at 20.04.24 (1).jpeg" alt="Escudo" class="w-12 h-12 rounded-full object-cover border border-slate-700 shadow">
+                    <div>
+                        <h2 class="text-lg font-bold text-white tracking-wide">Financeiro S.C. Internacional</h2>
+                        <p class="text-xs text-red-400 font-medium">Controle Contábil da Diretoria</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <span id="user-display" class="text-sm font-semibold text-white block">Diretor</span>
+                        <span id="user-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"></span>
+                    </div>
+                    <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-lg text-xs font-medium transition border border-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Sair</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navegação por Abas -->
+        <nav class="bg-slate-900/50 border-b border-slate-800/80 backdrop-blur">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-4 overflow-x-auto">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-red-600 text-red-500 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard & Gráficos
+                </button>
+                <button onclick="switchTab('transactions')" id="btn-tab-transactions" class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-wallet"></i> Lançamentos & Comprovantes
+                </button>
+                <button onclick="switchTab('board')" id="btn-tab-board" class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-users-gear"></i> Gerenciar Diretoria
+                </button>
+            </div>
+        </nav>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- ABA 1: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 border border-slate-800 p-4 rounded-xl gap-4">
+                    <div>
+                        <h3 class="font-bold text-white text-base">Visão Geral Contábil</h3>
+                        <p class="text-xs text-slate-400">Acompanhe o fluxo financeiro e o saldo em tempo real.</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                        <button onclick="exportPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition shadow flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf"></i> Baixar Relatório PDF
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-slate-400 whitespace-nowrap"><i class="fa-solid fa-calendar-days mr-1"></i> Período:</label>
+                            <select id="filter-month" onchange="renderDashboard()" class="bg-slate-950 border border-slate-800 text-sm rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600">
+                                <option value="all">Todos os Meses (Geral)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Saldo Atual em Caixa</p>
+                                <h4 id="kpi-balance" class="text-2xl font-bold text-white mt-1">R$ 0,00</h4>
+                            </div>
+                            <div id="kpi-balance-icon" class="p-3 rounded-lg bg-slate-800 text-slate-300">
+                                <i class="fa-solid fa-vault text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total de Receitas</p>
+                                <h4 id="kpi-income" class="text-2xl font-bold text-emerald-400 mt-1">R$ 0,00</h4>
+                            </div>
+                            <div class="p-3 rounded-lg bg-emerald-950/50 text-emerald-400 border border-emerald-900/50">
+                                <i class="fa-solid fa-arrow-trend-up text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total de Despesas</p>
+                                <h4 id="kpi-expense" class="text-2xl font-bold text-rose-400 mt-1">R$ 0,00</h4>
+                            </div>
+                            <div class="p-3 rounded-lg bg-rose-950/50 text-rose-400 border border-rose-900/50">
+                                <i class="fa-solid fa-arrow-trend-down text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Partidas / Jogos</p>
+                                <h4 id="kpi-games" class="text-2xl font-bold text-blue-400 mt-1">0</h4>
+                            </div>
+                            <div class="p-3 rounded-lg bg-blue-950/50 text-blue-400 border border-blue-900/50">
+                                <i class="fa-solid fa-futbol text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl lg:col-span-2 flex flex-col">
+                        <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-red-500"></i> Fluxo de Entradas x Saídas Mensal
+                        </h4>
+                        <div class="flex-1 relative min-h-[280px]">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex flex-col">
+                        <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-red-500"></i> Gastos por Categoria
+                        </h4>
+                        <div class="flex-1 relative min-h-[280px] flex items-center justify-center">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 2: LANÇAMENTOS E COMPROVANTES -->
+            <div id="tab-transactions" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl h-fit">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
+                            <i class="fa-solid fa-file-circle-plus text-red-500"></i> Novo Lançamento
+                        </h3>
+
+                        <!-- Alerta de Leitura OCR -->
+                        <div id="ocr-loading" class="hidden mb-4 bg-blue-950/50 border border-blue-900/60 p-3 rounded-lg text-center text-xs text-blue-300">
+                            <i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Lendo comprovante e extraindo valor automaticamente...
+                        </div>
+
+                        <form id="transaction-form" onsubmit="saveTransaction(event)" class="space-y-4">
+                            <input type="hidden" id="trans-id">
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Comprovante de Pagamento (Leitura Automática)</label>
+                                <input type="file" id="trans-receipt" accept="image/*" onchange="processReceiptOCR(this)" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer">
+                                <span class="text-[10px] text-slate-500 mt-1 block">Ao enviar a foto, o sistema preenche o valor e descrição sozinho.</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Tipo de Movimento</label>
+                                <select id="trans-type" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600">
+                                    <option value="expense">Despesa (Saída)</option>
+                                    <option value="income">Receita (Entrada)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Descrição / Remetente</label>
+                                <input type="text" id="trans-desc" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: Compra de Material / Nome do Remetente">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Valor (R$)</label>
+                                    <input type="number" step="0.01" id="trans-value" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="0,00">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Data</label>
+                                    <input type="date" id="trans-date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
+                                <select id="trans-category" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600">
+                                    <optgroup label="Despesas">
+                                        <option value="Arbitragem">Arbitragem</option>
+                                        <option value="Locação de Campo">Locação de Campo</option>
+                                        <option value="Alimentação / Hidratação">Alimentação / Hidratação</option>
+                                        <option value="Transporte">Transporte</option>
+                                        <option value="Material / Uniformes">Material / Uniformes</option>
+                                        <option value="Outras Despesas">Outras Despesas</option>
+                                    </optgroup>
+                                    <optgroup label="Receitas">
+                                        <option value="Mensalidades de Atletas">Mensalidades de Atletas</option>
+                                        <option value="Patrocínios / Apoio">Patrocínios / Apoio</option>
+                                        <option value="Doações / Diretoria">Doações / Diretoria</option>
+                                        <option value="Eventos / Bar">Eventos / Bar</option>
+                                        <option value="Outras Receitas">Outras Receitas</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Relacionado a Jogo/Partida (Opcional)</label>
+                                <input type="text" id="trans-game" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: S.C. Internacional x Adversário">
+                            </div>
+
+                            <div class="flex gap-2 pt-2">
+                                <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg transition text-sm shadow">
+                                    Salvar Lançamento
+                                </button>
+                                <button type="button" onclick="resetForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-sm transition">
+                                    Limpar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl lg:col-span-2 flex flex-col">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 border-b border-slate-800 pb-3">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-list text-red-500"></i> Histórico de Lançamentos
+                            </h3>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <div class="relative flex-1 sm:w-64">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-search"></i></span>
+                                    <input type="text" id="search-input" onkeyup="renderTransactions()" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-red-600" placeholder="Buscar por descrição...">
+                                </div>
+                                <select id="filter-type" onchange="renderTransactions()" class="bg-slate-950 border border-slate-800 text-xs rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-red-600">
+                                    <option value="all">Todos</option>
+                                    <option value="income">Receitas</option>
+                                    <option value="expense">Despesas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase">
+                                        <th class="py-3 px-3">Data</th>
+                                        <th class="py-3 px-3">Descrição / Jogo</th>
+                                        <th class="py-3 px-3">Categoria</th>
+                                        <th class="py-3 px-3 text-right">Valor</th>
+                                        <th class="py-3 px-3 text-center">Comprovante</th>
+                                        <th class="py-3 px-3 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-table-body" class="divide-y divide-slate-800/60 text-xs">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: GERENCIAR DIRETORIA -->
+            <div id="tab-board" class="tab-content hidden space-y-6">
+                <div id="admin-lock-msg" class="hidden bg-rose-950/40 border border-rose-900/50 p-6 rounded-xl text-center">
+                    <i class="fa-solid fa-lock text-rose-500 text-3xl mb-2"></i>
+                    <h3 class="font-bold text-white text-base">Acesso Restrito</h3>
+                    <p class="text-xs text-slate-400 mt-1">Apenas a **Conta Mãe (Administrador Master)** pode visualizar e cadastrar novos acessos da diretoria ou alterar a logo.</p>
+                </div>
+
+                <div id="admin-panel-content" class="space-y-8">
+                    <!-- Configuração da Logo (Exclusivo Conta Mãe) -->
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
+                            <i class="fa-solid fa-image text-red-500"></i> Alterar Escudo / Logo do Clube
+                        </h3>
+                        <div class="flex flex-col sm:flex-row items-center gap-6">
+                            <img id="admin-preview-logo" src="" alt="Logo Atual" class="w-20 h-20 rounded-full object-cover border border-slate-700 shadow">
+                            <div class="flex-1 w-full space-y-3">
+                                <label class="block text-xs text-slate-400">Selecione a nova imagem do escudo do clube para atualizar no sistema e no GitHub:</label>
+                                <input type="file" id="new-logo-file" accept="image/*" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer">
+                                <button onclick="updateClubLogo()" class="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg text-xs transition shadow">
+                                    Aplicar Nova Logo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl h-fit">
+                            <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
+                                <i class="fa-solid fa-user-plus text-red-500"></i> Criar Acesso para Membro
+                            </h3>
+
+                            <form id="member-form" onsubmit="saveMember(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome Completo</label>
+                                    <input type="text" id="member-name" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: Carlos Silva">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Cargo / Função</label>
+                                    <input type="text" id="member-role" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: Tesoureiro / Diretor">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Usuário de Acesso</label>
+                                    <input type="text" id="member-username" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: carlos.tesouraria">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Senha</label>
+                                    <input type="password" id="member-password" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="••••••••">
+                                </div>
+
+                                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg transition text-sm shadow">
+                                    Cadastrar Novo Membro
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl lg:col-span-2">
+                            <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
+                                <i class="fa-solid fa-shield-halved text-red-500"></i> Membros com Acesso ao Sistema
+                            </h3>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase">
+                                            <th class="py-3 px-3">Nome</th>
+                                            <th class="py-3 px-3">Cargo</th>
+                                            <th class="py-3 px-3">Usuário</th>
+                                            <th class="py-3 px-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="members-table-body" class="divide-y divide-slate-800/60 text-xs">
+                                        <!-- Preenchido via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+            S.C. Internacional &copy; 2026 - Sistema de Gestão Financeira da Diretoria
+        </footer>
+    </div>
+
+    <!-- MODAL DE VISUALIZAÇÃO DE COMPROVANTE -->
+    <div id="receipt-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Comprovante de Pagamento</h3>
+                <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="text-center">
+                <img id="modal-receipt-img" src="" alt="Comprovante" class="max-h-[70vh] mx-auto rounded-lg border border-slate-800 object-contain">
+            </div>
+            <div class="mt-4 text-right">
+                <button onclick="closeReceiptModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-medium">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DA APLICAÇÃO -->
+    <script>
+        const defaultLogo = "WhatsApp Image 2026-11-16 at 20.04.24 (1).jpeg";
+        const defaultMembers = [
+            { name: "Administrador (Conta Mãe)", role: "Master / Presidente", username: "diretoria", password: "123", isAdmin: true }
+        ];
+
+        const defaultTransactions = [
+            { id: 1, type: 'income', description: 'Mensalidade de Atletas - Outubro', value: 1200.00, date: '2026-10-05', category: 'Mensalidades de Atletas', game: '', receipt: null },
+            { id: 2, type: 'expense', description: 'Pagamento de Arbitragem - Jogo Final', value: 350.00, date: '2026-10-12', category: 'Arbitragem', game: 'S.C. Internacional x Real Iperó', receipt: null }
+        ];
+
+        if (!localStorage.getItem('sc_logo')) {
+            localStorage.setItem('sc_logo', defaultLogo);
+        }
+        if (!localStorage.getItem('sc_members')) {
+            localStorage.setItem('sc_members', JSON.stringify(defaultMembers));
+        }
+        if (!localStorage.getItem('sc_transactions')) {
+            localStorage.setItem('sc_transactions', JSON.stringify(defaultTransactions));
+        }
+
+        let currentUserObj = JSON.parse(sessionStorage.getItem('sc_current_user_obj')) || null;
+        let monthlyChartInstance = null;
+        let categoryChartInstance = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyClubLogo();
+            if (currentUserObj) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                document.getElementById('user-display').textContent = currentUserObj.name;
+                
+                const badge = document.getElementById('user-badge');
+                if (currentUserObj.isAdmin) {
+                    badge.textContent = "Conta Mãe (Admin)";
+                    badge.className = "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-red-950 text-red-400 border border-red-900";
+                } else {
+                    badge.textContent = "Membro Diretoria";
+                    badge.className = "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-slate-800 text-slate-300 border border-slate-700";
+                }
+
+                initApp();
+            }
+            document.getElementById('trans-date').valueAsDate = new Date();
+        });
+
+        function applyClubLogo() {
+            const logo = localStorage.getItem('sc_logo') || defaultLogo;
+            document.getElementById('login-club-logo').src = logo;
+            document.getElementById('header-club-logo').src = logo;
+            const preview = document.getElementById('admin-preview-logo');
+            if (preview) preview.src = logo;
+        }
+
+        function updateClubLogo() {
+            if (!currentUserObj || !currentUserObj.isAdmin) {
+                alert('Apenas a Conta Mãe pode alterar a logo.');
+                return;
+            }
+            const fileInput = document.getElementById('new-logo-file');
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    localStorage.setItem('sc_logo', e.target.result);
+                    applyClubLogo();
+                    alert('Logo atualizada com sucesso!');
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                alert('Selecione uma imagem primeiro.');
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value.trim();
+            
+            const members = JSON.parse(localStorage.getItem('sc_members'));
+            const found = members.find(m => m.username === u && m.password === p);
+
+            if (found) {
+                currentUserObj = found;
+                sessionStorage.setItem('sc_current_user_obj', JSON.stringify(currentUserObj));
+                location.reload();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('sc_current_user_obj');
+            location.reload();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-red-600', 'text-red-500');
+                el.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const btn = document.getElementById(`btn-tab-${tabId}`);
+            btn.classList.add('border-red-600', 'text-red-500');
+            btn.classList.remove('border-transparent', 'text-slate-400');
+
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'transactions') renderTransactions();
+            if (tabId === 'board') checkAdminAccess();
+        }
+
+        function initApp() {
+            populateMonthFilter();
+            renderDashboard();
+            renderTransactions();
+        }
+
+        function checkAdminAccess() {
+            const lockMsg = document.getElementById('admin-lock-msg');
+            const panelContent = document.getElementById('admin-panel-content');
+
+            if (!currentUserObj.isAdmin) {
+                lockMsg.classList.remove('hidden');
+                panelContent.classList.add('hidden');
+            } else {
+                lockMsg.classList.add('hidden');
+                panelContent.classList.remove('hidden');
+                renderMembers();
+                applyClubLogo();
+            }
+        }
+
+        // LEITOR AUTOMÁTICO DE COMPROVANTES (OCR)
+        function processReceiptOCR(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const loadingDiv = document.getElementById('ocr-loading');
+                loadingDiv.classList.remove('hidden');
+
+                Tesseract.recognize(
+                    file,
+                    'por',
+                    { logger: m => console.log(m) }
+                ).then(({ data: { text } }) => {
+                    loadingDiv.classList.add('hidden');
+                    console.log("Texto extraído:", text);
+
+                    // Procurar por valores em Reais (ex: R$ 150,00 ou 150.00)
+                    const valueRegex = /(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2})/g;
+                    let matches = [...text.matchAll(valueRegex)];
+                    
+                    if (matches.length > 0) {
+                        // Pega o último valor encontrado no comprovante (geralmente o valor total)
+                        let valStr = matches[matches.length - 1][1].replace(/\./g, '').replace(',', '.');
+                        document.getElementById('trans-value').value = valStr;
+                    }
+
+                    // Tentar extrair possíveis nomes ou descrições (remetente/pagador)
+                    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+                    if (lines.length > 0) {
+                        // Sugere a primeira linha relevante como descrição/remetente
+                        document.getElementById('trans-desc').value = "Pix/Recibo: " + lines[0];
+                    }
+                }).catch(err => {
+                    loadingDiv.classList.add('hidden');
+                    console.error("Erro OCR:", err);
+                });
+            }
+        }
+
+        function populateMonthFilter() {
+            const txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+            const monthsSet = new Set();
+            txs.forEach(t => { if (t.date) monthsSet.add(t.date.substring(0, 7)); });
+
+            const select = document.getElementById('filter-month');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="all">Todos os Meses (Geral)</option>';
+
+            Array.from(monthsSet).sort().reverse().forEach(m => {
+                const [year, month] = m.split('-');
+                const dateObj = new Date(year, month - 1, 1);
+                const label = dateObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
+
+        function renderDashboard() {
+            const txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+            const filterMonth = document.getElementById('filter-month').value;
+
+            const filtered = txs.filter(t => {
+                if (filterMonth === 'all') return true;
+                return t.date && t.date.startsWith(filterMonth);
+            });
+
+            let income = 0, expense = 0;
+            const gamesSet = new Set();
+
+            filtered.forEach(t => {
+                if (t.type === 'income') income += Number(t.value);
+                if (t.type === 'expense') expense += Number(t.value);
+                if (t.game && t.game.trim() !== '') gamesSet.add(t.game.trim());
+            });
+
+            const balance = income - expense;
+
+            document.getElementById('kpi-balance').textContent = balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('kpi-income').textContent = income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('kpi-expense').textContent = expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('kpi-games').textContent = gamesSet.size;
+
+            const balanceCardIcon = document.getElementById('kpi-balance-icon');
+            balanceCardIcon.className = balance >= 0 ? "p-3 rounded-lg bg-emerald-950/50 text-emerald-400 border border-emerald-900/50" : "p-3 rounded-lg bg-rose-950/50 text-rose-400 border border-rose-900/50";
+
+            renderMonthlyChart(txs);
+            renderCategoryChart(filtered);
+        }
+
+        function renderMonthlyChart(txs) {
+            const monthlyData = {};
+            txs.forEach(t => {
+                if (!t.date) return;
+                const m = t.date.substring(0, 7);
+                if (!monthlyData[m]) monthlyData[m] = { income: 0, expense: 0 };
+                if (t.type === 'income') monthlyData[m].income += Number(t.value);
+                if (t.type === 'expense') monthlyData[m].expense += Number(t.value);
+            });
+
+            const sortedMonths = Object.keys(monthlyData).sort();
+            const labels = sortedMonths.map(m => { const [y, mm] = m.split('-'); return `${mm}/${y}`; });
+            const incomeArr = sortedMonths.map(m => monthlyData[m].income);
+            const expenseArr = sortedMonths.map(m => monthlyData[m].expense);
+
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length ? labels : ['Nenhum dado'],
+                    datasets: [
+                        { label: 'Receitas', data: incomeArr.length ? incomeArr : [0], backgroundColor: '#10b981', borderRadius: 6 },
+                        { label: 'Despesas', data: expenseArr.length ? expenseArr : [0], backgroundColor: '#f43f5e', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function renderCategoryChart(filteredTxs) {
+            const catData = {};
+            filteredTxs.filter(t => t.type === 'expense').forEach(t => {
+                catData[t.category] = (catData[t.category] || 0) + Number(t.value);
+            });
+
+            const labels = Object.keys(catData);
+            const data = Object.values(catData);
+
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChartInstance) categoryChartInstance.destroy();
+
+            categoryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['Sem despesas no período'],
+                    datasets: [{
+                        data: data.length ? data : [1],
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 12 } } }
+                }
+            });
+        }
+
+        function saveTransaction(e) {
+            e.preventDefault();
+            const id = document.getElementById('trans-id').value;
+            const type = document.getElementById('trans-type').value;
+            const description = document.getElementById('trans-desc').value;
+            const value = parseFloat(document.getElementById('trans-value').value);
+            const date = document.getElementById('trans-date').value;
+            const category = document.getElementById('trans-category').value;
+            const game = document.getElementById('trans-game').value;
+            const fileInput = document.getElementById('trans-receipt');
+
+            let txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+
+            const processSave = (receiptBase64) => {
+                if (id) {
+                    const idx = txs.findIndex(t => t.id == id);
+                    if (idx !== -1) {
+                        txs[idx] = {
+                            id: Number(id), type, description, value, date, category, game,
+                            receipt: receiptBase64 !== undefined ? receiptBase64 : txs[idx].receipt
+                        };
+                    }
+                } else {
+                    txs.push({
+                        id: Date.now(), type, description, value, date, category, game,
+                        receipt: receiptBase64 || null
+                    });
+                }
+
+                localStorage.setItem('sc_transactions', JSON.stringify(txs));
+                resetForm();
+                populateMonthFilter();
+                renderTransactions();
+                renderDashboard();
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) { processSave(e.target.result); };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                processSave(undefined);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('transaction-form').reset();
+            document.getElementById('trans-id').value = '';
+            document.getElementById('trans-date').valueAsDate = new Date();
+        }
+
+        function renderTransactions() {
+            const txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const filterType = document.getElementById('filter-type').value;
+
+            const tbody = document.getElementById('transactions-table-body');
+            tbody.innerHTML = '';
+
+            const filtered = txs.filter(t => {
+                const matchSearch = t.description.toLowerCase().includes(search) || (t.game && t.game.toLowerCase().includes(search)) || t.category.toLowerCase().includes(search);
+                const matchType = filterType === 'all' || t.type === filterType;
+                return matchSearch && matchType;
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">Nenhum lançamento encontrado.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(t => {
+                const [y, m, d] = t.date.split('-');
+                const formattedDate = `${d}/${m}/${y}`;
+                const formattedVal = Number(t.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const isIncome = t.type === 'income';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/60 transition";
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-slate-300 whitespace-nowrap">${formattedDate}</td>
+                    <td class="py-3 px-3">
+                        <div class="font-medium text-white">${t.description}</div>
+                        ${t.game ? `<div class="text-[10px] text-blue-400 mt-0.5"><i class="fa-solid fa-futbol mr-1"></i>${t.game}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-3 text-slate-300">${t.category}</td>
+                    <td class="py-3 px-3 text-right font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}">
+                        ${isIncome ? '+' : '-'} ${formattedVal}
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                        ${t.receipt ? `<button onclick="openReceiptModal('${t.receipt}')" class="bg-slate-800 hover:bg-slate-700 text-red-400 px-2.5 py-1 rounded text-[11px] font-medium border border-slate-700"><i class="fa-solid fa-image mr-1"></i> Ver</button>` : '<span class="text-slate-600 text-[11px]">Sem anexo</span>'}
+                    </td>
+                    <td class="py-3 px-3 text-center whitespace-nowrap">
+                        <button onclick="editTransaction(${t.id})" class="text-slate-400 hover:text-blue-400 p-1 transition" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteTransaction(${t.id})" class="text-slate-400 hover:text-rose-400 p-1 transition ml-1" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editTransaction(id) {
+            const txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+            const t = txs.find(item => item.id === id);
+            if (!t) return;
+
+            document.getElementById('trans-id').value = t.id;
+            document.getElementById('trans-type').value = t.type;
+            document.getElementById('trans-desc').value = t.description;
+            document.getElementById('trans-value').value = t.value;
+            document.getElementById('trans-date').value = t.date;
+            document.getElementById('trans-category').value = t.category;
+            document.getElementById('trans-game').value = t.game || '';
+            
+            switchTab('transactions');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Deseja realmente excluir este lançamento?')) {
+                let txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+                txs = txs.filter(t => t.id !== id);
+                localStorage.setItem('sc_transactions', JSON.stringify(txs));
+                populateMonthFilter();
+                renderTransactions();
+                renderDashboard();
+            }
+        }
+
+        function openReceiptModal(base64Str) {
+            document.getElementById('modal-receipt-img').src = base64Str;
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receipt-modal').classList.add('hidden');
+        }
+
+        // GERAR RELATÓRIO EM PDF
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const txs = JSON.parse(localStorage.getItem('sc_transactions')) || [];
+            const filterMonth = document.getElementById('filter-month').value;
+
+            const filtered = txs.filter(t => {
+                if (filterMonth === 'all') return true;
+                return t.date && t.date.startsWith(filterMonth);
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Cabeçalho do PDF
+            doc.setFillColor(208, 16, 18);
+            doc.rect(0, 0, 210, 25, "F");
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(14);
+            doc.text("S.C. INTERNACIONAL - RELATÓRIO FINANCEIRO", 14, 16);
+
+            doc.setTextColor(50, 50, 50);
+            doc.setFontSize(10);
+            doc.text(`Emitido por: ${currentUserObj ? currentUserObj.name : 'Diretoria'}`, 14, 35);
+            doc.text(`Período: ${filterMonth === 'all' ? 'Geral (Todos os Registros)' : filterMonth}`, 14, 42);
+
+            let y = 55;
+            doc.setFontSize(9);
+            doc.setFillColor(240, 240, 240);
+            doc.rect(14, y, 182, 8, "F");
+            doc.text("Data", 16, y + 6);
+            doc.text("Descrição", 36, y + 6);
+            doc.text("Categoria", 115, y + 6);
+            doc.text("Valor", 170, y + 6, { align: "right" });
+
+            y += 12;
+            let totalIn = 0;
+            let totalOut = 0;
+
+            filtered.forEach(t => {
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                const [yy, mm, dd] = t.date.split('-');
+                const dt = `${dd}/${mm}/${yy}`;
+                const valFmt = Number(t.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                
+                if (t.type === 'income') totalIn += Number(t.value);
+                else totalOut += Number(t.value);
+
+                doc.text(dt, 16, y);
+                doc.text(t.description.substring(0, 45), 36, y);
+                doc.text(t.category.substring(0, 25), 115, y);
+                doc.text(`${t.type === 'income' ? '+' : '-'} ${valFmt}`, 190, y, { align: "right" });
+                y += 7;
+            });
+
+            y += 5;
+            doc.line(14, y, 196, y);
+            y += 10;
+
+            const saldo = totalIn - totalOut;
+            doc.setFontSize(10);
+            doc.text(`Total Receitas: R$ ${totalIn.toFixed(2)}`, 14, y);
+            doc.text(`Total Despesas: R$ ${totalOut.toFixed(2)}`, 80, y);
+            doc.text(`Saldo Final: R$ ${saldo.toFixed(2)}`, 150, y);
+
+            doc.save(`relatorio-financeiro-sc-internacional.pdf`);
+        }
+
+        function saveMember(e) {
+            e.preventDefault();
+            if (!currentUserObj.isAdmin) {
+                alert('Acesso negado. Apenas a Conta Mãe pode criar novos usuários.');
+                return;
+            }
+
+            const name = document.getElementById('member-name').value;
+            const role = document.getElementById('member-role').value;
+            const username = document.getElementById('member-username').value.trim();
+            const password = document.getElementById('member-password').value.trim();
+
+            let members = JSON.parse(localStorage.getItem('sc_members')) || [];
+            if (members.some(m => m.username === username)) {
+                alert('Este nome de usuário já existe.');
+                return;
+            }
+
+            members.push({ name, role, username, password, isAdmin: false });
+            localStorage.setItem('sc_members', JSON.stringify(members));
+            document.getElementById('member-form').reset();
+            renderMembers();
+            alert('Novo membro cadastrado com sucesso!');
+        }
+
+        function renderMembers() {
+            const members = JSON.parse(localStorage.getItem('sc_members')) || [];
+            const tbody = document.getElementById('members-table-body');
+            tbody.innerHTML = '';
+
+            members.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/60 transition";
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-medium text-white">${m.name} ${m.isAdmin ? '<span class="text-[10px] text-red-400 font-bold ml-1">(Conta Mãe)</span>' : ''}</td>
+                    <td class="py-3 px-3 text-slate-300">${m.role}</td>
+                    <td class="py-3 px-3 text-red-400 font-mono text-[11px]">${m.username}</td>
+                    <td class="py-3 px-3 text-center">
+                        ${!m.isAdmin ? `<button onclick="deleteMember('${m.username}')" class="text-slate-400 hover:text-rose-400 p-1 transition" title="Remover Acesso"><i class="fa-solid fa-trash"></i></button>` : '<span class="text-slate-600 text-[10px]">Protegido</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteMember(username) {
+            if (confirm('Deseja remover o acesso deste membro?')) {
+                let members = JSON.parse(localStorage.getItem('sc_members')) || [];
+                members = members.filter(m => m.username !== username);
+                localStorage.setItem('sc_members', JSON.stringify(members));
+                renderMembers();
+            }
+        }
+    </script>
+</body>
+</html>
