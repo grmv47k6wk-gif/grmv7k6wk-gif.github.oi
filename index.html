@@ -980,3 +980,336 @@
     </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro S.C. Internacional</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tesseract.js (Leitor OCR para Comprovantes) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- jsPDF (Gerador de Relatórios em PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-rose-500 to-red-700"></div>
+            
+            <div class="text-center mb-6">
+                <!-- Escudo do Clube -->
+                <div class="inline-block p-2 bg-slate-800/80 rounded-full border border-slate-700 shadow-inner mb-3">
+                    <img id="login-club-logo" src="WhatsApp Image 2026-11-16 at 20.04.24 (1).jpeg" alt="Escudo S.C. Internacional" class="w-24 h-24 object-cover rounded-full mx-auto shadow-md">
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight text-white">S.C. Internacional</h1>
+                <p class="text-xs text-red-400 font-semibold uppercase tracking-widest mt-1">Painel Financeiro da Diretoria</p>
+            </div>
+
+            <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Usuário</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="login-user" required class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-red-600 transition" placeholder="Digite seu usuário">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Senha</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="login-pass" required class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-red-600 transition" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div id="login-error" class="hidden text-xs text-rose-400 bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-lg text-center">
+                    Usuário ou senha incorretos.
+                </div>
+
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg transition shadow-lg shadow-red-900/30 text-sm">
+                    Acessar Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APLICAÇÃO PRINCIPAL -->
+    <div id="app-container" class="hidden flex-1 flex flex-col">
+        <!-- Cabeçalho -->
+        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <img id="header-club-logo" src="WhatsApp Image 2026-11-16 at 20.04.24 (1).jpeg" alt="Escudo" class="w-12 h-12 rounded-full object-cover border border-slate-700 shadow">
+                    <div>
+                        <h2 class="text-lg font-bold text-white tracking-wide">Financeiro S.C. Internacional</h2>
+                        <p class="text-xs text-red-400 font-medium">Controle Contábil da Diretoria</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <span id="user-display" class="text-sm font-semibold text-white block">Diretor</span>
+                        <span id="user-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"></span>
+                    </div>
+                    <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-lg text-xs font-medium transition border border-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Sair</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navegação por Abas -->
+        <nav class="bg-slate-900/50 border-b border-slate-800/80 backdrop-blur">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-4 overflow-x-auto">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-red-600 text-red-500 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard & Gráficos
+                </button>
+                <button onclick="switchTab('transactions')" id="btn-tab-transactions" class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-wallet"></i> Lançamentos & Comprovantes
+                </button>
+                <button onclick="switchTab('board')" id="btn-tab-board" class="tab-btn py-3 px-4 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-users-gear"></i> Gerenciar Diretoria
+                </button>
+            </div>
+        </nav>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- ABA 1: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 border border-slate-800 p-4 rounded-xl gap-4">
+                    <div>
+                        <h3 class="font-bold text-white text-base">Visão Geral Contábil</h3>
+                        <p class="text-xs text-slate-400">Acompanhe o fluxo financeiro e o saldo em tempo real.</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                        <button onclick="exportPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition shadow flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf"></i> Baixar Relatório PDF
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-slate-400 whitespace-nowrap"><i class="fa-solid fa-calendar-days mr-1"></i> Período:</label>
+                            <select id="filter-month" onchange="renderDashboard()" class="bg-slate-950 border border-slate-800 text-sm rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600">
+                                <option value="all">Todos os Meses (Geral)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Saldo Atual em Caixa</p>
+                                <h4 id="kpi-balance" class="text-2xl font-bold text-white mt-1">R$ 0,00</h4>
+                            </div>
+                            <div id="kpi-balance-icon" class="p-3 rounded-lg bg-slate-800 text-slate-300">
+                                <i class="fa-solid fa-vault text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total de Receitas</p>
+                                <h4 id="kpi-income" class="text-2xl font-bold text-emerald-400 mt-1">R$ 0,00</h4>
+                            </div>
+                            <div class="p-3 rounded-lg bg-emerald-950/50 text-emerald-400 border border-emerald-900/50">
+                                <i class="fa-solid fa-arrow-trend-up text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total de Despesas</p>
+                                <h4 id="kpi-expense" class="text-2xl font-bold text-rose-400 mt-1">R$ 0,00</h4>
+                            </div>
+                            <div class="p-3 rounded-lg bg-rose-950/50 text-rose-400 border border-rose-900/50">
+                                <i class="fa-solid fa-arrow-trend-down text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Partidas / Jogos</p>
+                                <h4 id="kpi-games" class="text-2xl font-bold text-blue-400 mt-1">0</h4>
+                            </div>
+                            <div class="p-3 rounded-lg bg-blue-950/50 text-blue-400 border border-blue-900/50">
+                                <i class="fa-solid fa-futbol text-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl lg:col-span-2 flex flex-col">
+                        <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-red-500"></i> Fluxo de Entradas x Saídas Mensal
+                        </h4>
+                        <div class="flex-1 relative min-h-[280px]">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex flex-col">
+                        <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-red-500"></i> Gastos por Categoria
+                        </h4>
+                        <div class="flex-1 relative min-h-[280px] flex items-center justify-center">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 2: LANÇAMENTOS E COMPROVANTES -->
+            <div id="tab-transactions" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl h-fit">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
+                            <i class="fa-solid fa-file-circle-plus text-red-500"></i> Novo Lançamento
+                        </h3>
+
+                        <!-- Alerta de Leitura OCR -->
+                        <div id="ocr-loading" class="hidden mb-4 bg-blue-950/50 border border-blue-900/60 p-3 rounded-lg text-center text-xs text-blue-300">
+                            <i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Lendo comprovante e extraindo valor automaticamente...
+                        </div>
+
+                        <form id="transaction-form" onsubmit="saveTransaction(event)" class="space-y-4">
+                            <input type="hidden" id="trans-id">
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Comprovante de Pagamento (Leitura Automática)</label>
+                                <input type="file" id="trans-receipt" accept="image/*" onchange="processReceiptOCR(this)" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer">
+                                <span class="text-[10px] text-slate-500 mt-1 block">Ao enviar a foto, o sistema preenche o valor e descrição sozinho.</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Tipo de Movimento</label>
+                                <select id="trans-type" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600">
+                                    <option value="expense">Despesa (Saída)</option>
+                                    <option value="income">Receita (Entrada)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Descrição / Remetente</label>
+                                <input type="text" id="trans-desc" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: Compra de Material / Nome do Remetente">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Valor (R$)</label>
+                                    <input type="number" step="0.01" id="trans-value" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="0,00">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Data</label>
+                                    <input type="date" id="trans-date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
+                                <select id="trans-category" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600">
+                                    <optgroup label="Despesas">
+                                        <option value="Arbitragem">Arbitragem</option>
+                                        <option value="Locação de Campo">Locação de Campo</option>
+                                        <option value="Alimentação / Hidratação">Alimentação / Hidratação</option>
+                                        <option value="Transporte">Transporte</option>
+                                        <option value="Material / Uniformes">Material / Uniformes</option>
+                                        <option value="Outras Despesas">Outras Despesas</option>
+                                    </optgroup>
+                                    <optgroup label="Receitas">
+                                        <option value="Mensalidades de Atletas">Mensalidades de Atletas</option>
+                                        <option value="Patrocínios / Apoio">Patrocínios / Apoio</option>
+                                        <option value="Doações / Diretoria">Doações / Diretoria</option>
+                                        <option value="Eventos / Bar">Eventos / Bar</option>
+                                        <option value="Outras Receitas">Outras Receitas</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Relacionado a Jogo/Partida (Opcional)</label>
+                                <input type="text" id="trans-game" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-red-600" placeholder="Ex: S.C. Internacional x Adversário">
+                            </div>
+
+                            <div class="flex gap-2 pt-2">
+                                <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg transition text-sm shadow">
+                                    Salvar Lançamento
+                                </button>
+                                <button type="button" onclick="resetForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-sm transition">
+                                    Limpar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl lg:col-span-2 flex flex-col">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 border-b border-slate-800 pb-3">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-list text-red-500"></i> Histórico de Lançamentos
+                            </h3>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <div class="relative flex-1 sm:w-64">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-search"></i></span>
+                                    <input type="text" id="search-input" onkeyup="renderTransactions()" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-red-600" placeholder="Buscar por descrição...">
+                                </div>
+                                <select id="filter-type" onchange="renderTransactions()" class="bg-slate-950 border border-slate-800 text-xs rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-red-600">
+                                    <option value="all">Todos</option>
+                                    <option value="income">Receitas</option>
+                                    <option value="expense">Despesas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase">
+                                        <th class="py-3 px-3">Data</th>
+                                        <th class="py-3 px-3">Descrição / Jogo</th>
+                                        <th class="py-3 px-3">Categoria</th>
+                                        <th class="py-3 px-3 text-right">Valor</th>
+                                        <th class="py-3 px-3 text-center">Comprovante</th>
+                                        <th class="py-3 px-3 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-table-body" class="divide-y divide-slate-800/60 text-xs">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: GERENCIAR DIRETORIA -->
+            <div id="tab-board" class="tab-content hidden space-y-6">
+                <div id="admin-lock-msg" class="hidden bg-rose-950/40 border border-rose-900/50 p-6 rounded-xl text-center">
+                    <i class="fa-solid fa-lock text-rose-500 text-3xl mb-2"></i>
+                    <h3 class="font-bold text-white text-base">Acesso Restrito</h3>
+                    <p class="text-xs text-slate-400 mt-1">Apenas a **Conta Mãe (Administrador Master)** pode visualizar e cadastrar novos acessos da diretoria ou alterar a logo.</p>
+                </div>
+
+                <div id="admin-panel-content" class="space-y-8">
+                    <!-- Configuração da Logo (Exclusivo Conta Mãe) -->
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800
